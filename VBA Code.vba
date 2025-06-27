@@ -1,6 +1,7 @@
 ' =================================================================================
 ' MACRO DE EXTRAGERE DATE DIN DESENE CATIA (VERSIUNEA FINALA)
 ' Metoda: Iterare directa cu acces la geometria interna a obiectelor.
+' Include detalii extinse pentru texte (coordonate, leaderi).
 ' =================================================================================
 
 Option Explicit
@@ -98,10 +99,11 @@ End Sub
 
 Private Function GetElementDetails(ByVal elem As Object) As String
     Dim details As String: details = ""
-    Dim tempArr(1)
+    Dim tempArr(1) ' Array pentru a stoca coordonate (x,y)
     
-    On Error Resume Next ' Gestionare robusta a erorilor
+    On Error Resume Next ' Gestionare robusta a erorilor pentru intreaga functie
     
+    ' Am adaugat "DrawingTextWithLeader" pentru a fi explicit, desi TypeName returneaza de obicei "DrawingText"
     Select Case TypeName(elem)
         Case "DrawingDimension"
             Dim dimValue As Object, upTol As Double, lowTol As Double
@@ -115,15 +117,43 @@ Private Function GetElementDetails(ByVal elem As Object) As String
             End If
             details = details & "            > Tip Cota: " & elem.DimType & vbCrLf
 
-        Case "DrawingText"
-            Dim anchorPoint As Object
-            Set anchorPoint = elem.anchorPoint
-            If Not anchorPoint Is Nothing Then
-                anchorPoint.GetCoordinates tempArr
-                If Err.Number = 0 Then details = details & "            > Pozitie Ancorare (x,y): (" & FormatNumber(tempArr(0), 2) & ", " & FormatNumber(tempArr(1), 2) & ")" & vbCrLf
-                Err.Clear
-            End If
+        Case "DrawingText", "DrawingTextWithLeader" ' <<< MODIFICARE AICI
+            ' --- Logica noua pentru text si leaderi ---
+            Dim xPos As Double, yPos As Double
+            Dim numLeaders As Integer
+            
             details = details & "            > Text: """ & elem.Text & """" & vbCrLf
+            
+            ' Obtinere coordonatele directe ale textului
+            xPos = elem.X
+            yPos = elem.Y
+            If Err.Number = 0 Then
+                details = details & "            > Pozitie Text (x,y): (" & FormatNumber(xPos, 2) & ", " & FormatNumber(yPos, 2) & ")" & vbCrLf
+            End If
+            Err.Clear
+            
+            ' Obtinere informatii despre leaderi
+            numLeaders = 0 ' Valoare initiala
+            On Error Resume Next ' Ne asteptam la erori aici pentru textele simple
+            numLeaders = elem.Leaders.Count
+            If Err.Number <> 0 Then numLeaders = 0: Err.Clear ' Daca esueaza, inseamna ca nu are leaderi
+            
+            details = details & "            > Numar de leaderi: " & numLeaders & vbCrLf
+
+            If numLeaders > 0 Then
+                Dim i As Integer, aLeader As Object
+                For i = 1 To numLeaders
+                    Set aLeader = elem.Leaders.Item(i)
+                    aLeader.GetAnchorPosition tempArr
+                    If Err.Number = 0 Then
+                        details = details & "              > Leader #" & i & " - Varf la (x,y): (" & FormatNumber(tempArr(0), 2) & ", " & FormatNumber(tempArr(1), 2) & ")" & vbCrLf
+                    Else
+                        details = details & "              > Leader #" & i & " - Coordonate varf indisponibile" & vbCrLf
+                        Err.Clear
+                    End If
+                Next i
+            End If
+            ' --- Sfarsit logica noua ---
             
         Case "Point2D"
             elem.GetCoordinates tempArr
@@ -149,7 +179,7 @@ Private Function GetElementDetails(ByVal elem As Object) As String
             centerPoint.GetCoordinates tempArr
             If Err.Number = 0 Then details = details & "            > Centru (x,y): (" & FormatNumber(tempArr(0), 2) & ", " & FormatNumber(tempArr(1), 2) & ")" & vbCrLf
             Err.Clear
-            details = details & "            > Raza: " & FormatNumber(elem.radius, 3) & vbCrLf
+            details = details & "            > Raza: " & FormatNumber(elem.Radius, 3) & vbCrLf
 
         Case "Axis2D"
             Dim originPoint As Object
