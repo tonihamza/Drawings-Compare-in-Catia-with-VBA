@@ -1,11 +1,3 @@
-' =================================================================================
-' MACRO DE EXTRAGERE DATE DIN DESENE CATIA (VERSIUNEA FINALA SI DEFINITIVA)
-' Metoda: Extrage toate datele posibile. Omite afi?area proprieta?ilor
-'         vizuale pe care API-ul CATIA nu le poate furniza (ex: grosime,
-'         tipul de linie pentru axe etc.) pentru un raport curat.
-'
-' VERSIUNEA 3.5: Rafinare finala. Nu se mai afiseaza proprietatile cu cod 0.
-' =================================================================================
 
 Option Explicit
 
